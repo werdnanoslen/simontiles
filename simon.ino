@@ -149,11 +149,11 @@
 #define MODE_BEEGEES 2
 
 // DotStar constants
-#define NUMTILES   3
+#define NUMTILES   6
 #define NUMSTRIPS  6 * NUMTILES  // 6 strips per tile
 #define NUMLEDS    7 * NUMSTRIPS // 7 LEDs per strip
-#define DATAPIN    6
-#define CLOCKPIN   7
+#define DATAPIN    12
+#define CLOCKPIN   13
 #define RED        0xFF0000
 #define BLUE       0x00FF00
 #define GREEN      0x0000FF
@@ -163,20 +163,55 @@
 Adafruit_DotStar dotstar = Adafruit_DotStar(NUMLEDS, DATAPIN, CLOCKPIN, DOTSTAR_BRG);
 
 // Strips are tuples for start and end indeces of LEDs
+// 7 LEDS up to 17
+// after that, the first 2 out of 3 are 6
 int strips[NUMSTRIPS][2] = {
-  {0, 6},
-  {7, 13},
-  {14, 20},
-  {21, 27},
-  {28, 34},
-  {35, 41}
+  {0, 6},   // 0
+  {7, 13},  // 1
+  {14, 20}, // 2
+  {21, 27}, // 3
+  {28, 34}, // 4
+  {35, 41}, // 5
+  {42, 48}, // 6
+  {49, 55}, // 7
+  {56, 42}, // 8
+  {63, 69}, // 9
+  {70, 76}, // 10
+  {77, 83}, // 11
+  {84, 90}, // 12
+  {91, 97}, // 13
+  {98, 104},  // 14
+  {105, 111}, // 15
+  {112, 118}, // 16
+  {119, 126}, // 17
+  {127, 132}, // 18 (6)
+  {133, 139}, // 19 (6)
+  {140, 146}, // 20
+  {147, 152}, // 21 (6)
+  {153, 158}, // 22 {6)
+  {159, 165}, // 23
+  {166, 171}, // 24 (6)
+  {172, 177}, // 25 (6)
+  {178, 184}, // 26
+  {185, 190}, // 27 (6)
+  {191, 196}, // 28 (6)
+  {197, 203}, // 29
+  {204, 209}, // 30 (6)
+  {210, 215}, // 31 (6)
+  {216, 222}, // 32
+  {223, 228}, // 33 (6)
+  {229, 234}, // 34 (6)
+  {235, 241}  // 35
 };
 
 // Tiles are arrays of strips' indeces
 int tiles[NUMTILES][NUMSTRIPS/NUMTILES] = {
-  {0, 0, 0, 0, 0, 0},
-  {1, 1, 1, 1, 1, 1},
-  {2, 2, 2, 2, 2, 2}
+  {0, 1, 2, 27, 34, 35},
+  {26, 3, 4, 5, 24, 23},
+  {22, 23, 6, 7, 8, 21},
+  {9, 10, 11, 18, 19, 20},
+  {12, 13, 14, 15, 16, 17},
+  {28, 29, 30, 31, 32, 33}
 };
 
 // Game state variables
