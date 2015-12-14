@@ -129,12 +129,19 @@
 #define CHOICE_NONE     0 //Used to check buttons
 #define CHOICE_RED  (1 << 0)
 #define CHOICE_GREEN    (1 << 1)
+#define CHOICE_BLUE  (1 << 2)
 #define CHOICE_WHITE   (1 << 3)
+#define CHOICE_CYAN    (1 << 4)
+#define CHOICE_YELLOW   (1 << 5)
 
 // Button pin definitions
-#define BUTTON_RED    4
-#define BUTTON_GREEN  3
-#define BUTTON_WHITE 2
+#define BUTTON_RED    1
+#define BUTTON_GREEN  2
+#define BUTTON_BLUE   3
+#define BUTTON_WHITE  4
+#define BUTTON_CYAN 5
+#define BUTTON_YELLOW 6
+
 
 // Buzzer pin definitions
 #define BUZZER1  8
@@ -155,8 +162,11 @@
 #define DATAPIN    12
 #define CLOCKPIN   13
 #define RED        0xFF0000
-#define BLUE       0x00FF00
-#define GREEN      0x0000FF
+#define GREEN      0x00FF00
+#define BLUE       0x0000FF
+#define WHITE      0xFFFFFF
+#define CYAN       0x00FFFF
+#define YELLOW     0xFFFF00
 #define BLACK      0x000000
 
 // current (in mA) = (20 * number of 'on' pixels) + (1 * number of 'off' pixels);
@@ -174,7 +184,7 @@ int strips[NUMSTRIPS][2] = {
   {35, 41}, // 5
   {42, 48}, // 6
   {49, 55}, // 7
-  {56, 42}, // 8
+  {56, 62}, // 8
   {63, 69}, // 9
   {70, 76}, // 10
   {77, 83}, // 11
@@ -183,21 +193,21 @@ int strips[NUMSTRIPS][2] = {
   {98, 104},  // 14
   {105, 111}, // 15
   {112, 118}, // 16
-  {119, 126}, // 17
-  {127, 132}, // 18 (6)
-  {133, 139}, // 19 (6)
-  {140, 146}, // 20
-  {147, 152}, // 21 (6)
-  {153, 158}, // 22 {6)
-  {159, 165}, // 23
-  {166, 171}, // 24 (6)
-  {172, 177}, // 25 (6)
-  {178, 184}, // 26
-  {185, 190}, // 27 (6)
-  {191, 196}, // 28 (6)
-  {197, 203}, // 29
-  {204, 209}, // 30 (6)
-  {210, 215}, // 31 (6)
+  {119, 124}, // 17 (6)
+  {125, 130}, // 18 (6)
+  {131, 137}, // 19
+  {138, 143}, // 20 {6)
+  {144, 149}, // 21 (6)
+  {150, 156}, // 22
+  {157, 162}, // 23 (6)
+  {163, 168}, // 24 (6)
+  {169, 175}, // 25
+  {176, 181}, // 26 (6)
+  {182, 187}, // 27 (6)
+  {188, 194}, // 28
+  {195, 201}, // 29
+  {202, 208}, // 30
+  {209, 215}, // 31
   {216, 222}, // 32
   {223, 228}, // 33 (6)
   {229, 234}, // 34 (6)
@@ -207,7 +217,7 @@ int strips[NUMSTRIPS][2] = {
 // Tiles are arrays of strips' indeces
 int tiles[NUMTILES][NUMSTRIPS/NUMTILES] = {
   {0, 1, 2, 27, 34, 35},
-  {26, 3, 4, 5, 24, 23},
+  {26, 3, 4, 5, 24, 25},
   {22, 23, 6, 7, 8, 21},
   {9, 10, 11, 18, 19, 20},
   {12, 13, 14, 15, 16, 17},
@@ -227,6 +237,9 @@ void setup()
   pinMode(BUTTON_RED, INPUT_PULLUP);
   pinMode(BUTTON_GREEN, INPUT_PULLUP);
   pinMode(BUTTON_WHITE, INPUT_PULLUP);
+  pinMode(BUTTON_BLUE, INPUT_PULLUP);
+  pinMode(BUTTON_CYAN, INPUT_PULLUP);
+  pinMode(BUTTON_YELLOW, INPUT_PULLUP);
 
   pinMode(BUZZER1, OUTPUT);
   pinMode(BUZZER2, OUTPUT);
@@ -268,7 +281,7 @@ void loop()
   attractMode(); // Blink lights while waiting for user to press a button
 
   // Indicate the start of game play
-  setLEDs(CHOICE_RED | CHOICE_GREEN | CHOICE_WHITE); // Turn all LEDs on
+  setLEDs(CHOICE_RED | CHOICE_GREEN | CHOICE_WHITE | CHOICE_BLUE | CHOICE_YELLOW | CHOICE_CYAN); // Turn all LEDs on
   delay(1000);
   setLEDs(CHOICE_OFF); // Turn off LEDs
   delay(250);
@@ -294,8 +307,19 @@ void toggleTile(int tileNumber, bool turnOn) {
   int stripsPerTile = NUMSTRIPS / NUMTILES;
   for (int s=0; s<stripsPerTile; ++s) {
     int strip = tiles[tileNumber][s];
-    for (int led=strips[strip][0]; led<strips[strip][1]; ++led) {
-      uint32_t color = turnOn ? RED : BLACK;
+    for (int led=strips[strip][0]; led<=strips[strip][1]; ++led) {
+      uint32_t color = BLACK;
+      if (turnOn) {
+        switch (tileNumber) {
+          case 0: color = RED; break;
+          case 1: color = GREEN; break;
+          case 2: color = BLUE; break;
+          case 3: color = WHITE; break;
+          case 4: color = CYAN; break;
+          case 5: color = YELLOW; break;
+          default: color = BLACK; break;
+        }
+      }
       dotstar.setPixelColor(led, color);
     }
   }
@@ -379,12 +403,15 @@ void playMoves(void)
 // Adds a new random button to the game sequence, by sampling the timer
 void add_to_moves(void)
 {
-  byte newButton = random(0, 4); //min (included), max (exluded)
+  byte newButton = random(0, 6); //min (included), max (exluded)
 
-  // We have to convert this number, 0 to 3, to CHOICEs
+  // We have to convert this number, 0 to 5, to CHOICEs
   if(newButton == 0) newButton = CHOICE_RED;
   else if(newButton == 1) newButton = CHOICE_GREEN;
+  else if(newButton == 2) newButton = CHOICE_BLUE;
   else if(newButton == 3) newButton = CHOICE_WHITE;
+  else if(newButton == 4) newButton = CHOICE_CYAN;
+  else if(newButton == 5) newButton = CHOICE_YELLOW;
 
   gameBoard[gameRound++] = newButton; // Add this new button to the game array
 }
@@ -414,6 +441,24 @@ void setLEDs(byte leds)
     toggleTile(2, 1);
   } else {
     toggleTile(2, 0);
+  }
+
+  if ((leds & CHOICE_BLUE) != 0) {
+    toggleTile(3, 1);
+  } else {
+    toggleTile(3, 0);
+  }
+  
+  if ((leds & CHOICE_YELLOW) != 0) {
+    toggleTile(4, 1);
+  } else {
+    toggleTile(4, 0);
+  }
+  
+  if ((leds & CHOICE_CYAN) != 0) {
+    toggleTile(5, 1);
+  } else {
+    toggleTile(5, 0);
   }
   
   dotstar.show();
@@ -451,6 +496,9 @@ byte checkButton(void)
   if (digitalRead(BUTTON_RED) == 0) return(CHOICE_RED); 
   else if (digitalRead(BUTTON_GREEN) == 0) return(CHOICE_GREEN); 
   else if (digitalRead(BUTTON_WHITE) == 0) return(CHOICE_WHITE);
+  else if (digitalRead(BUTTON_BLUE) == 0) return(CHOICE_BLUE); 
+  else if (digitalRead(BUTTON_CYAN) == 0) return(CHOICE_CYAN);
+  else if (digitalRead(BUTTON_YELLOW) == 0) return(CHOICE_YELLOW); 
 
   return(CHOICE_NONE); // If no button is pressed, return none
 }
@@ -473,6 +521,15 @@ void toner(byte which, int buzz_length_ms)
     buzz_sound(buzz_length_ms, 568); 
     break;
   case CHOICE_WHITE:
+    buzz_sound(buzz_length_ms, 638); 
+    break;
+  case CHOICE_BLUE:
+    buzz_sound(buzz_length_ms, 1136); 
+    break;
+  case CHOICE_CYAN:
+    buzz_sound(buzz_length_ms, 568); 
+    break;
+  case CHOICE_YELLOW:
     buzz_sound(buzz_length_ms, 638); 
     break;
   }
@@ -565,6 +622,18 @@ void attractMode(void)
     if (checkButton() != CHOICE_NONE) return;
 
     setLEDs(CHOICE_WHITE);
+    delay(100);
+    if (checkButton() != CHOICE_NONE) return;
+    
+    setLEDs(CHOICE_BLUE);
+    delay(100);
+    if (checkButton() != CHOICE_NONE) return;
+
+    setLEDs(CHOICE_YELLOW);
+    delay(100);
+    if (checkButton() != CHOICE_NONE) return;
+
+    setLEDs(CHOICE_CYAN);
     delay(100);
     if (checkButton() != CHOICE_NONE) return;
   }
