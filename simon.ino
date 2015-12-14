@@ -151,10 +151,6 @@
 #define ROUNDS_TO_WIN      13 //Number of rounds to succesfully remember before you win. 13 is do-able.
 #define ENTRY_TIME_LIMIT   3000 //Amount of time to press a button before game times out. 3000ms = 3 sec
 
-#define MODE_MEMORY  0
-#define MODE_BATTLE  1
-#define MODE_BEEGEES 2
-
 // DotStar constants
 #define NUMTILES   6
 #define NUMSTRIPS  6 * NUMTILES  // 6 strips per tile
@@ -225,7 +221,6 @@ int tiles[NUMTILES][NUMSTRIPS/NUMTILES] = {
 };
 
 // Game state variables
-byte gameMode = MODE_MEMORY; //By default, let's play the memory game
 byte gameBoard[32]; //Contains the combination of buttons as we advance
 byte gameRound = 0; //Counts the number of succesful rounds the player has made it through
 
@@ -243,28 +238,6 @@ void setup()
 
   pinMode(BUZZER1, OUTPUT);
   pinMode(BUZZER2, OUTPUT);
-
-  //Mode checking
-  gameMode = MODE_MEMORY; // By default, we're going to play the memory game
-
-  // Check to see if the lower right button is pressed
-  if (checkButton() == CHOICE_WHITE) play_beegees();
-
-  // Check to see if upper right button is pressed
-  if (checkButton() == CHOICE_GREEN)
-  {
-    gameMode = MODE_BATTLE; //Put game into battle mode
-
-    //Turn on the upper right (green) LED
-    setLEDs(CHOICE_GREEN);
-    toner(CHOICE_GREEN, 150);
-
-    setLEDs(CHOICE_RED | CHOICE_WHITE); // Turn on the other LEDs until you release button
-
-    while(checkButton() != CHOICE_NONE) ; // Wait for user to stop pressing button
-
-    //Now do nothing. Battle mode will be serviced in the main routine
-  }
 
   #if defined(__AVR_ATtiny85__) && (F_CPU == 16000000L)
     clock_prescale_set(clock_div_1); // Enable 16 MHz on Trinket
@@ -286,21 +259,11 @@ void loop()
   setLEDs(CHOICE_OFF); // Turn off LEDs
   delay(250);
 
-  if (gameMode == MODE_MEMORY)
-  {
-    // Play memory game and handle result
-    if (play_memory() == true) 
-      play_winner(); // Player won, play winner tones
-    else 
-      play_loser(); // Player lost, play loser tones
-  }
-
-  if (gameMode == MODE_BATTLE)
-  {
-    play_battle(); // Play game until someone loses
-
+  // Play memory game and handle result
+  if (play_memory() == true) 
+    play_winner(); // Player won, play winner tones
+  else 
     play_loser(); // Player lost, play loser tones
-  }
 }
 
 void toggleTile(int tileNumber, bool turnOn) {
@@ -356,35 +319,6 @@ boolean play_memory(void)
   }
 
   return true; // Player made it through all the rounds to win!
-}
-
-// Play the special 2 player battle mode
-// A player begins by pressing a button then handing it to the other player
-// That player repeats the button and adds one, then passes back.
-// This function returns when someone loses
-boolean play_battle(void)
-{
-  gameRound = 0; // Reset the game frame back to one frame
-
-  while (1) // Loop until someone fails 
-  {
-    byte newButton = wait_for_button(); // Wait for user to input next move
-    gameBoard[gameRound++] = newButton; // Add this new button to the game array
-
-    // Then require the player to repeat the sequence.
-    for (byte currentMove = 0 ; currentMove < gameRound ; currentMove++)
-    {
-      byte choice = wait_for_button();
-
-      if (choice == 0) return false; // If wait timed out, player loses.
-
-      if (choice != gameBoard[currentMove]) return false; // If the choice is incorect, player loses.
-    }
-
-    delay(100); // Give the user an extra 100ms to hand the game to the other player
-  }
-
-  return true; // We should never get here
 }
 
 // Plays the current contents of the game moves
@@ -639,59 +573,12 @@ void attractMode(void)
   }
 }
 
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-// The following functions are related to Beegees Easter Egg only
-
-// Notes in the melody. Each note is about an 1/8th note, "0"s are rests.
-int melody[] = {
-  NOTE_G4, NOTE_A4, 0, NOTE_C5, 0, 0, NOTE_G4, 0, 0, 0,
-  NOTE_E4, 0, NOTE_D4, NOTE_E4, NOTE_G4, 0,
-  NOTE_D4, NOTE_E4, 0, NOTE_G4, 0, 0,
-  NOTE_D4, 0, NOTE_E4, 0, NOTE_G4, 0, NOTE_A4, 0, NOTE_C5, 0};
-
-int noteDuration = 115; // This essentially sets the tempo, 115 is just about right for a disco groove :)
-int LEDnumber = 0; // Keeps track of which LED we are on during the beegees loop
-
-// Do nothing but play bad beegees music
-// This function is activated when user holds bottom right button during power up
-void play_beegees()
-{
-  //Turn on the bottom right (WHITE) LED
-  setLEDs(CHOICE_WHITE);
-  toner(CHOICE_WHITE, 150);
-
-  setLEDs(CHOICE_RED | CHOICE_GREEN); // Turn on the other LEDs until you release button
-
-  while(checkButton() != CHOICE_NONE) ; // Wait for user to stop pressing button
-
-  setLEDs(CHOICE_NONE); // Turn off LEDs
-
-  delay(1000); // Wait a second before playing song
-
-  digitalWrite(BUZZER1, LOW); // setup the "BUZZER1" side of the buzzer to stay low, while we play the tone on the other pin.
-
-  while(checkButton() == CHOICE_NONE) //Play song until you press a button
-  {
-    // iterate over the notes of the melody:
-    for (int thisNote = 0; thisNote < 32; thisNote++) {
-      changeLED();
-      tone(BUZZER2, melody[thisNote],noteDuration);
-      // to distinguish the notes, set a minimum time between them.
-      // the note's duration + 30% seems to work well:
-      int pauseBetweenNotes = noteDuration * 1.30;
-      delay(pauseBetweenNotes);
-      // stop the tone playing:
-      noTone(BUZZER2);
-    }
-  }
-}
-
 // Each time this function is called the board moves to the next LED
 void changeLED(void)
 {
   setLEDs(1 << LEDnumber); // Change the LED
 
   LEDnumber++; // Goto the next LED
-  if(LEDnumber > 3) LEDnumber = 0; // Wrap the counter if needed
+  if(LEDnumber > 6) LEDnumber = 0; // Wrap the counter if needed
 }
 
